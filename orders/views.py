@@ -29,7 +29,7 @@ class OrderCreateView(APIView):
         return Response({"message": "Order created successfully"},status=status.HTTP_201_CREATED)
     
 class MyOrderListView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     
     def get(self,req):
         orders = Order.objects.filter(user = req.user)
