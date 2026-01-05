@@ -1,10 +1,11 @@
-from django.shortcuts import render
+from django.shortcuts import render,get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated,AllowAny
 from .models import Product
 from .serializers import ProductSerializer
 from rest_framework import status
+
 # Create your views here.
 class ProductListView(APIView):
     permission_classes = [AllowAny]
@@ -26,3 +27,42 @@ class ProductListView(APIView):
             return Response (serializer.data,status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+    
+class ProductDetailView(APIView):
+    def get(self,req,pk):
+        product = get_object_or_404(Product,pk=pk)
+        serializer = ProductSerializer(product)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    #should be a protected route
+    def put(self,req,pk):
+        if not req.user.is_staff:
+            return Response({"message": "Only Staff/Admin can access this route"},status=status.HTTP_403_FORBIDDEN)
+        product = get_object_or_404(Product,pk=pk)
+        serializer = ProductSerializer(product,data=req.data)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=status.HTTP_200_OK)
+        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+    
+    #should be a protected route
+    def patch(self,req,pk):
+        if not req.user.is_staff:
+            return Response({"message": "Only Staff/Admin can access this route"},status=status.HTTP_403_FORBIDDEN)
+        product = get_object_or_404(Product,pk=pk)
+        serializer = ProductSerializer(product,data=req.data,partial = True)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=status.HTTP_200_OK)
+        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+    
+    #should be a protected route
+    def delete(self,req,pk):
+        
+        if not req.user.is_staff:
+            return Response({"message": "Only Staff/Admin can access this route"},status=status.HTTP_403_FORBIDDEN)
+        product = get_object_or_404(Product,pk=pk)
+        product.delete()
+        return Response({"message": "Product deleted successfully"},status=status.HTTP_204_NO_CONTENT)
+        
