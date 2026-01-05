@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from .models import User
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True,required=True)
@@ -19,3 +21,37 @@ class RegisterSerializer(serializers.ModelSerializer):
             password = validated_data['password'],
             )
         return user
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password= serializers.CharField(write_only=True)
+    def validate(self, attrs):
+        email = attrs.get('email')
+        password = attrs.get('password')
+        user = authenticate(email=email,password=password)
+        
+        if not user:
+            raise serializers.ValidationError('Invalid credentials')
+        if not user.is_active:
+            raise serializers.ValidationError('Account isnt active')
+        
+        refresh = RefreshToken.for_user(user)
+        refresh['email'] = user.email
+        refresh['full_name'] = user.full_name
+        refresh['user_id'] = str(user.id)
+        
+        return {
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+            "user": {
+                "id": str(user.id),
+                "full_name": user.full_name,
+                "email": user.email
+            }
+        }        
+        
+class MeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id','email','full_name','date_joined')
+    
